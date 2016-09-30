@@ -44,7 +44,23 @@ public:
 
 bool is_match(const Translation& translation);
 
-}
+enum Fileformat : char
+{
+    unknown = -1,
+    bam = 0,
+    fq, fastq = 1,
+    gam = 2,
+    gfa = 3,
+    json = 4,
+    locus = 5,
+    pileup = 6,
+    stream = 7,
+    translation = 8,
+    turtle_in = 9,
+    vg = 10
+};
 
+
+}
 
 #endif

@@ -2108,7 +2108,7 @@ void VG::vcf_records_to_alleles(vector<vcflib::Variant>& records,
 
 
 
-#ifdef debug
+#ifdef DEBUG
     cerr << "Processing " << records.size() << " vcf records..." << endl;
 #endif
 
@@ -2195,7 +2195,7 @@ void VG::vcf_records_to_alleles(vector<vcflib::Variant>& records,
             // -1 for nothing needs to visit it and we don't care.
             int alt_number = -1;
 
-#ifdef debug
+#ifdef DEBUG
             cerr << "Considering alt " << alleles.first << " at " << var.position << endl;
             cerr << var << endl;
 #endif
@@ -2216,7 +2216,7 @@ void VG::vcf_records_to_alleles(vector<vcflib::Variant>& records,
                     alt_number = var.getAltAlleleIndex(alt_sequence) + 1;
                 }
 
-#ifdef debug
+#ifdef DEBUG
                 cerr << "Alt is number " << alt_number << endl;
 #endif
 
@@ -2287,7 +2287,7 @@ void VG::vcf_records_to_alleles(vector<vcflib::Variant>& records,
                     // visit this alt?
                     auto visited = make_pair(allele.position, found_at);
 
-#ifdef debug
+#ifdef DEBUG
                     cerr << var_name << " alt " << alt_number << " visits allele #" << found_at
                         << " at position " << allele.position << " of " << allele.ref << " -> " << allele.alt << endl;
 #endif
@@ -2406,7 +2406,7 @@ void VG::from_alleles(const map<long, vector<vcflib::VariantAllele> >& altp,
 
     int tid = omp_get_thread_num();
 
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
     {
         cerr << tid << ": in from_alleles" << endl;
@@ -2482,7 +2482,7 @@ void VG::from_alleles(const map<long, vector<vcflib::VariantAllele> >& altp,
         if(all_perfect_matches && no_variant_visits) {
             // No need to break anything here.
 
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
             {
                 cerr << tid << ": Skipping entire allele site at " << va.first << endl;
@@ -2507,7 +2507,7 @@ void VG::from_alleles(const map<long, vector<vcflib::VariantAllele> >& altp,
             return alleles[a].ref.size() < alleles[b].ref.size();
         });
 
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
                 {
                     cerr << tid << ": Processing " << allele_numbers_by_ref_length.size() << " alleles at " << va.first << endl;
@@ -2539,7 +2539,7 @@ void VG::from_alleles(const map<long, vector<vcflib::VariantAllele> >& altp,
                 // allele is not visited. If other alleles here are visited,
                 // we'll get cuts from them.
 
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
                 {
                     cerr << tid << ": Skipping variant at " << allele_start_pos
@@ -2550,7 +2550,7 @@ void VG::from_alleles(const map<long, vector<vcflib::VariantAllele> >& altp,
                 continue;
             }
 
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
             {
                 cerr << tid << ": Handling variant at " << allele_start_pos
@@ -2677,7 +2677,7 @@ void VG::from_alleles(const map<long, vector<vcflib::VariantAllele> >& altp,
 
             }
 
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
             {
                 if (left_seq_node) cerr << tid << ": left_ref " << left_seq_node->id()
@@ -2779,7 +2779,7 @@ void VG::from_alleles(const map<long, vector<vcflib::VariantAllele> >& altp,
                             paths.append_mapping(path_name, alt_node->id());
                         }
 
-#ifdef debug
+#ifdef DEBUG
                         cerr << "Path " << path_name << " uses these alts" << endl;
 #endif
 
@@ -2791,7 +2791,7 @@ void VG::from_alleles(const map<long, vector<vcflib::VariantAllele> >& altp,
                         // but not this allele to indicate the deletion of
                         // nodes.
 
-#ifdef debug
+#ifdef DEBUG
                         cerr << "Path " << path_name << " would use these alts if there were any" << endl;
 #endif
                     }
@@ -3715,7 +3715,7 @@ VG::VG(vcflib::VariantCallFile& variantCallFile,
                 update_progress(chunk_end);
             }
         }
-#ifdef debug
+#ifdef DEBUG
         cerr << omp_get_thread_num() << ": graphq size " << graphq.size() << endl;
 #endif
         graphq_size = graphq.size();
@@ -3779,7 +3779,7 @@ VG::VG(vcflib::VariantCallFile& variantCallFile,
 
             int tid = omp_get_thread_num();
             Plan* plan = construction.at(i);
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
             cerr << tid << ": " << "constructing graph " << plan->graph << " over "
                  << plan->alleles.size() << " variants in " <<plan->seq.size() << "bp "
@@ -3803,7 +3803,7 @@ VG::VG(vcflib::VariantCallFile& variantCallFile,
             {
                 update_progress(++graphs_completed);
                 graph_completed.insert(plan->graph);
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
                 cerr << tid << ": " << "constructed graph " << plan->graph << endl;
 #endif
@@ -4865,7 +4865,7 @@ void VG::divide_node(Node* node, int pos, Node*& left, Node*& right) {
 
 void VG::divide_node(Node* node, vector<int> positions, vector<Node*>& parts) {
 
-#ifdef debug_divide
+#ifdef DEBUG_divide
 #pragma omp critical (cerr)
     cerr << "dividing node " << node->id() << " at ";
     for(auto pos : positions) {
@@ -4900,7 +4900,7 @@ void VG::divide_node(Node* node, vector<int> positions, vector<Node*>& parts) {
     Node* last_node = create_node(node->sequence().substr(last_pos));
     parts.push_back(last_node);
 
-#ifdef debug_divide
+#ifdef DEBUG_divide
 
 #pragma omp critical (cerr)
     {
@@ -4976,7 +4976,7 @@ void VG::divide_node(Node* node, vector<int> positions, vector<Node*>& parts) {
         for (auto m : to_divide) {
             // we have to divide the mapping
 
-#ifdef debug_divide
+#ifdef DEBUG_divide
 
 #pragma omp critical (cerr)
             cerr << omp_get_thread_num() << ": dividing mapping " << pb2json(*m) << endl;
@@ -5057,7 +5057,7 @@ void VG::divide_node(Node* node, vector<int> positions, vector<Node*>& parts) {
 
 
 
-#ifdef debug_divide
+#ifdef DEBUG_divide
 #pragma omp critical (cerr)
             cerr << omp_get_thread_num() << ": produced mappings:" << endl;
             for(auto mapping : mapping_parts) {
@@ -5182,7 +5182,7 @@ void VG::prev_kpaths_from_node(NodeTraversal node, int length,
    // look, and does not get the length of the current node chargged against it.
    // We keep the last node that length at all reaches into.
 
-#ifdef debug
+#ifdef DEBUG
     cerr << "Looking left from " << node << " out to length " << length <<
         " with remaining edges " << edge_max << " on top of:" << endl;
     for(auto x : postfix) {
@@ -5211,7 +5211,7 @@ void VG::prev_kpaths_from_node(NodeTraversal node, int length,
         // We're allowed to look off our end
 
         for (NodeTraversal& prev : prev_nodes) {
-#ifdef debug
+#ifdef DEBUG
             cerr << "Consider prev node " << prev << endl;
 #endif
             // if the current traversal and this one are consecutive a path we're following
@@ -5221,7 +5221,7 @@ void VG::prev_kpaths_from_node(NodeTraversal node, int length,
                                              node.node->id(), node.backward,
                                              followed_paths);
                 if (paths_over.empty()) {
-#ifdef debug
+#ifdef DEBUG
                     cerr << "paths over are empty" << endl;
 #endif
                     continue; // skip if we wouldn't reach this
@@ -5232,12 +5232,12 @@ void VG::prev_kpaths_from_node(NodeTraversal node, int length,
                 // We won't have been able to get anything out of this next node
                 maxed_nodes(prev);
 
-#ifdef debug
+#ifdef DEBUG
                 cerr << "Out of edge-crossing range" << endl;
 #endif
 
             } else {
-#ifdef debug
+#ifdef DEBUG
                 cerr << "Recursing..." << endl;
 #endif
                 prev_kpaths_from_node(prev,
@@ -5260,7 +5260,7 @@ void VG::prev_kpaths_from_node(NodeTraversal node, int length,
 
         }
     } else {
-#ifdef debug
+#ifdef DEBUG
         cerr << "No length remaining." << endl;
 # endif
     }
@@ -5270,7 +5270,7 @@ void VG::prev_kpaths_from_node(NodeTraversal node, int length,
         // crossings, or because our length will run out somewhere in this node.
         // Create a path for this node.
         walked_paths.insert(postfix);
-#ifdef debug
+#ifdef DEBUG
         cerr << "Reported path:" << endl;
         for(auto x : postfix) {
             cerr << "\t" << x << endl;
@@ -5552,7 +5552,7 @@ vector<Translation> VG::edit(const vector<Path>& paths_to_add) {
     // Collect the breakpoints
     map<id_t, set<pos_t>> breakpoints;
 
-#ifdef debug
+#ifdef DEBUG
     for (auto& p : paths_to_add) {
         cerr << pb2json(p) << endl;
     }
@@ -5754,7 +5754,7 @@ void VG::find_breakpoints(const Path& path, map<id_t, set<pos_t>>& breakpoints) 
     // We need to work out what offsets we will need to break each node at, if
     // we want to add in all the new material and edges in this path.
 
-#ifdef debug
+#ifdef DEBUG
     cerr << "Processing path..." << endl;
 #endif
 
@@ -5775,7 +5775,7 @@ void VG::find_breakpoints(const Path& path, map<id_t, set<pos_t>>& breakpoints) 
         // the reference.
         pos_t edit_first_position = make_pos_t(m.position());
 
-#ifdef debug
+#ifdef DEBUG
         cerr << "Processing mapping " << pb2json(m) << endl;
 #endif
 
@@ -5793,7 +5793,7 @@ void VG::find_breakpoints(const Path& path, map<id_t, set<pos_t>>& breakpoints) 
                 get_offset(edit_last_position) += e.from_length();
             }
 
-#ifdef debug
+#ifdef DEBUG
             cerr << "Edit on " << node_id << " from " << edit_first_position << " to " << edit_last_position << endl;
             cerr << pb2json(e) << endl;
 #endif
@@ -5804,7 +5804,7 @@ void VG::find_breakpoints(const Path& path, map<id_t, set<pos_t>>& breakpoints) 
                 // need to connect to, we need to make sure we have a breakpoint
                 // at the start of this edit.
 
-#ifdef debug
+#ifdef DEBUG
                 cerr << "Need to break " << node_id << " at edit lower end " <<
                     edit_first_position << endl;
 #endif
@@ -5820,7 +5820,7 @@ void VG::find_breakpoints(const Path& path, map<id_t, set<pos_t>>& breakpoints) 
                 // need to connect to, make sure we have a breakpoint at the end
                 // of this edit.
 
-#ifdef debug
+#ifdef DEBUG
                 cerr << "Need to break " << node_id << " at past edit upper end " <<
                     edit_last_position << endl;
 #endif
@@ -5885,7 +5885,7 @@ map<pos_t, Node*> VG::ensure_breakpoints(const map<id_t, set<pos_t>>& breakpoint
             id_t divide_offset = offset(breakpoint) - current_offset;
 
 
-#ifdef debug
+#ifdef DEBUG
             cerr << "Need to divide original " << original_node_id << " at " << breakpoint << "/" <<
 
                 original_node_length << endl;
@@ -5903,7 +5903,7 @@ map<pos_t, Node*> VG::ensure_breakpoints(const map<id_t, set<pos_t>>& breakpoint
             // existing perfect match paths in the graph.
             divide_node(right_part, divide_offset, left_part, right_part);
 
-#ifdef debug
+#ifdef DEBUG
 
             cerr << "Produced " << left_part->id() << " (" << left_part->sequence().size() << " bp)" << endl;
             cerr << "Left " << right_part->id() << " (" << right_part->sequence().size() << " bp)" << endl;
@@ -6047,14 +6047,14 @@ void VG::add_nodes_and_edges(const Path& path,
             get_offset(edit_last_position) += (e.from_length()?e.from_length()-1:0);
 
 //#define debug_edit true
-#ifdef debug_edit
+#ifdef DEBUG_edit
             cerr << "Edit on " << node_id << " from " << edit_first_position << " to " << edit_last_position << endl;
             cerr << pb2json(e) << endl;
 #endif
 
             if(edit_is_insertion(e) || edit_is_sub(e)) {
                 // This edit introduces new sequence.
-#ifdef debug_edit
+#ifdef DEBUG_edit
                 cerr << "Handling ins/sub relative to " << node_id << endl;
 #endif
                 // store the path representing this novel sequence in the translation table
@@ -6135,7 +6135,7 @@ void VG::add_nodes_and_edges(const Path& path,
 
                 if(dangling.node) {
                     // This actually referrs to a node.
-#ifdef debug_edit
+#ifdef DEBUG_edit
                     cerr << "Connecting " << dangling << " and " << NodeSide(new_node->id(), m.position().is_reverse()) << endl;
 #endif
                     // Add an edge from the dangling NodeSide to the start of this new node
@@ -6180,12 +6180,12 @@ void VG::add_nodes_and_edges(const Path& path,
                     }
                 }
 
-#ifdef debug_edit
+#ifdef DEBUG_edit
                 cerr << "Handling match relative to " << node_id << endl;
 #endif
 
                 if(dangling.node) {
-#ifdef debug_edit
+#ifdef DEBUG_edit
                     cerr << "Connecting " << dangling << " and " << NodeSide(left_node->id(), m.position().is_reverse()) << endl;
 #endif
 
@@ -6198,7 +6198,7 @@ void VG::add_nodes_and_edges(const Path& path,
             } else {
                 // We don't need to deal with deletions since we'll deal with the actual match/insert edits on either side
                 // Also, simplify() simplifies them out.
-#ifdef debug_edit
+#ifdef DEBUG_edit
                 cerr << "Skipping other edit relative to " << node_id << endl;
 #endif
             }
@@ -7341,7 +7341,7 @@ void VG::add_start_end_markers(int length,
         add_node(*end_node);
     }
 
-#ifdef debug
+#ifdef DEBUG
     cerr << "Start node is " << start_node->id() << ", end node is " << end_node->id() << endl;
 #endif
 
@@ -7357,7 +7357,7 @@ void VG::add_start_end_markers(int length,
 
         // Tie it to the start node
         create_edge(start_node, head);
-#ifdef debug
+#ifdef DEBUG
     cerr << "Added edge " << start_node->id() << "->" << head->id() << endl;
 #endif
     }
@@ -7374,7 +7374,7 @@ void VG::add_start_end_markers(int length,
 
         // Tie it to the end node
         create_edge(tail, end_node);
-#ifdef debug
+#ifdef DEBUG
     cerr << "Added edge " << tail->id() << "->" << end_node->id() << endl;
 #endif
     }
@@ -7391,7 +7391,7 @@ void VG::add_start_end_markers(int length,
 
         // Add the edge
         create_edge(start_node, to_attach);
-#ifdef debug
+#ifdef DEBUG
         cerr << "Added cycle-breaking edge " << start_node->id() << "->" << to_attach->id() << endl;
 #endif
         vector<Edge*> edges;
@@ -7401,19 +7401,19 @@ void VG::add_start_end_markers(int length,
             if (edge->to() == to_attach->id() && edge->from() != start_node->id()) {
                 //cerr << "creating edge" << endl;
                 Edge* created = create_edge(edge->from(), end_node->id(), edge->from_start(), false);
-#ifdef debug
+#ifdef DEBUG
                 cerr << "Added edge " << pb2json(*created) << " in response to " << pb2json(*edge) << endl;
 #endif
             }
         }
-#ifdef debug
+#ifdef DEBUG
         cerr << "Broke into disconnected component at " << to_attach->id() << endl;
 #endif
     }
 
     // Now we have no more disconnected stuff in our graph.
 
-#ifdef debug
+#ifdef DEBUG
     cerr << "Start node edges: " << endl;
     vector<Edge*> edges;
     edges_of_node(start_node, edges);
@@ -7674,7 +7674,7 @@ void VG::_for_each_kmer(int kmer_size,
                         bool allow_negatives,
                         Node* node) {
 
-#ifdef debug
+#ifdef DEBUG
     cerr << "Looking for kmers of size " << kmer_size << " over " << edge_max << " edges with node " << node << endl;
 #endif
 
@@ -7720,7 +7720,7 @@ void VG::_for_each_kmer(int kmer_size,
                         &make_cache_key,
                         &parallel,
                         &node](list<NodeTraversal>::iterator forward_node, list<NodeTraversal>& forward_path) {
-#ifdef debug
+#ifdef DEBUG
         cerr << "Handling path: " << endl;
         for(auto& traversal : forward_path) {
             cerr << "\t" << traversal.node->id() << " " << traversal.backward << endl;
@@ -7926,7 +7926,7 @@ void VG::_for_each_kmer(int kmer_size,
                             : node_by_path_position[i + kmer_size-1];
                         int node_past_end_position = (past_end == path.end()) ? 0 : i+kmer_size - node_start[&(*past_end)];
 
-#ifdef debug
+#ifdef DEBUG
                         cerr << "Checking for duplicates of " << (*start_node).node->id() << "." << start_node_offset
                              << (reversed?"⍃":"⍄")
                              << "-" << forward_kmer  << "-" << (past_end == path.end() ? 0 : (*past_end).node->id()) << "."
@@ -7955,7 +7955,7 @@ void VG::_for_each_kmer(int kmer_size,
 
                         lambda(kmer, instance, kmer_relative_start, path, *this);
                     } else {
-#ifdef debug
+#ifdef DEBUG
                         cerr << "Skipped " << kmer << " because it was already done" << endl;
 #endif
                     }
@@ -8275,7 +8275,7 @@ void VG::gcsa_handle_node_in_graph(Node* node, int kmer_size,
                                    function<void(KmerPosition&)> lambda) {
 
     // Go through all the kpaths of this node, and produce the GCSA2 kmers on both strands that start in this node.
-#ifdef debug
+#ifdef DEBUG
     cerr << "Visiting node " << node->id() << endl;
 #endif
     // This function runs in only one thread on a given node, so we can keep
@@ -8328,7 +8328,7 @@ void VG::gcsa_handle_node_in_graph(Node* node, int kmer_size,
 
             // Get the KmerPosition to fill, creating it if it doesn't exist already.
             auto cache_key = make_tuple(kmer, start_node->backward, start_pos);
-#ifdef debug
+#ifdef DEBUG
             if(cache.count(cache_key)) {
                 cerr << "F: Adding to " << kmer << " at " << start_node->node->id() << " " << start_node->backward
                      << " offset " << start_pos << endl;
@@ -8411,7 +8411,7 @@ void VG::gcsa_handle_node_in_graph(Node* node, int kmer_size,
             // the other way, but since end_pos already counts from the end,
             // we don't touch it.
             auto cache_key = make_tuple(reverse_complement(kmer), !end_node->backward, end_pos);
-#ifdef debug
+#ifdef DEBUG
             if(cache.count(cache_key)) {
                 cerr << "R: Adding to " << reverse_complement(kmer) << " at " << end_node->node->id()
                      << " " << !(*end_node).backward << " offset " << end_pos << endl;
@@ -8552,7 +8552,7 @@ void VG::for_each_gcsa_kmer_position_parallel(int kmer_size, bool path_only,
     edges_of_node(head_node, edges);
     if(edges.empty()) {
         // The head node is floating disconnected.
-#ifdef debug
+#ifdef DEBUG
         cerr << "Head node wasn't used. Excluding from graph." << endl;
 #endif
         destroy_node(head_node);
@@ -8564,7 +8564,7 @@ void VG::for_each_gcsa_kmer_position_parallel(int kmer_size, bool path_only,
     edges_of_node(tail_node, edges);
     if(edges.empty()) {
         // The tail node is floating disconnected.
-#ifdef debug
+#ifdef DEBUG
         cerr << "Tail node wasn't used. Excluding from graph." << endl;
 #endif
         destroy_node(tail_node);
@@ -9130,7 +9130,7 @@ while N is nonempty do
 void VG::topological_sort(deque<NodeTraversal>& l) {
     //assert(is_valid());
 
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
     cerr << "=====================STARTING SORT==========================" << endl;
 #endif
@@ -9177,7 +9177,7 @@ void VG::topological_sort(deque<NodeTraversal>& l) {
 
             if(unvisited.count(first_seed.node->id())) {
                 // We have an unvisited seed. Use it
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
                 cerr << "Starting from seed " << first_seed.node->id() << " orientation " << first_seed.backward << endl;
 #endif
@@ -9192,7 +9192,7 @@ void VG::topological_sort(deque<NodeTraversal>& l) {
         if(s.empty()) {
             // If we couldn't find a seed, just grab any old node.
             // Since map order is stable across systems, we can take the first node by id and put it locally forward.
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
             cerr << "Starting from arbitrary node " << unvisited.begin()->first << " locally forward" << endl;
 #endif
@@ -9207,7 +9207,7 @@ void VG::topological_sort(deque<NodeTraversal>& l) {
             s.erase(n.node->id());
             l.push_back(n);
             ++seen;
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
             cerr << "Using oriented node " << n.node->id() << " orientation " << n.backward << endl;
 #endif
@@ -9220,7 +9220,7 @@ void VG::topological_sort(deque<NodeTraversal>& l) {
             nodes_prev(n, prev);
             for(NodeTraversal& prev_node : prev) {
                 if(!unvisited.count(prev_node.node->id())) {
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
                     cerr << "\tHas left-side edge to cycle entry point " << prev_node.node->id()
                          << " orientation " << prev_node.backward << endl;
@@ -9228,7 +9228,7 @@ void VG::topological_sort(deque<NodeTraversal>& l) {
 
                     // Unindex it
                     Edge* bad_edge = get_edge(prev_node, n);
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
                     cerr << "\t\tEdge: " << bad_edge << endl;
 #endif
@@ -9243,7 +9243,7 @@ void VG::topological_sort(deque<NodeTraversal>& l) {
             nodes_next(n, next);
             for(NodeTraversal& next_node : next) {
 
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
                 cerr << "\tHas edge to " << next_node.node->id() << " orientation " << next_node.backward << endl;
 #endif
@@ -9255,7 +9255,7 @@ void VG::topological_sort(deque<NodeTraversal>& l) {
                 // Grab the edge
                 Edge* edge = get_edge(n, next_node);
 
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
                 cerr << "\t\tEdge: " << edge << endl;
 #endif
@@ -9266,14 +9266,14 @@ void VG::topological_sort(deque<NodeTraversal>& l) {
                 if(unvisited.count(next_node.node->id())) {
                     // We haven't already started here as an arbitrary cycle entry point
 
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
                     cerr << "\t\tAnd node hasn't been visited yet" << endl;
 #endif
 
                     if(node_count_prev(next_node) == 0) {
 
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
                         cerr << "\t\t\tIs last incoming edge" << endl;
 #endif
@@ -9291,13 +9291,13 @@ void VG::topological_sort(deque<NodeTraversal>& l) {
                         // Only take it if we don't already know of an orientation for this node.
                         seeds[next_node.node->id()] = next_node;
 
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
                         cerr << "\t\t\tSuggests seed " << next_node.node->id() << " orientation " << next_node.backward << endl;
 #endif
                     }
                 } else {
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
                     cerr << "\t\tAnd node was already visited (to break a cycle)" << endl;
 #endif
@@ -10187,7 +10187,7 @@ void VG::orient_nodes_forward(set<id_t>& nodes_flipped) {
     // First do the topological sort to order and orient
     deque<NodeTraversal> order_and_orientation;
     topological_sort(order_and_orientation);
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
     cerr << "+++++++++++++++++++++DOING REORIENTATION+++++++++++++++++++++++" << endl;
 #endif
@@ -10197,7 +10197,7 @@ void VG::orient_nodes_forward(set<id_t>& nodes_flipped) {
 
     for(auto& traversal : order_and_orientation) {
         // Say we visited this node
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
         cerr << "Visiting " << traversal.node->id() << endl;
 #endif
@@ -10207,7 +10207,7 @@ void VG::orient_nodes_forward(set<id_t>& nodes_flipped) {
 
         if(traversal.backward) {
             // We need to flip this node around.
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
             cerr << "Flipped node " << traversal.node->id() << endl;
 #endif
@@ -10240,7 +10240,7 @@ void VG::orient_nodes_forward(set<id_t>& nodes_flipped) {
             // Unindex every edge if we flipped the node, or only the edges we are flipping otherwise
             unindex_edge_by_node_sides(edge);
 
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
             cerr << "Unindexed edge " << edge->from() << (edge->from_start() ? " start" : " end")
                  << " -> " << edge->to() << (edge->to_end() ? " end" : " start") << endl;
@@ -10258,7 +10258,7 @@ void VG::orient_nodes_forward(set<id_t>& nodes_flipped) {
             bool temp_orientation = !edge->from_start();
             edge->set_from_start(!edge->to_end());
             edge->set_to_end(temp_orientation);
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
             cerr << "Reversed edge direction to " << edge->from() << (edge->from_start() ? " start" : " end")
                  << " -> " << edge->to() << (edge->to_end() ? " end" : " start") << endl;
@@ -10284,7 +10284,7 @@ void VG::orient_nodes_forward(set<id_t>& nodes_flipped) {
             // Reindex exactly what was unindexed
             index_edge_by_node_sides(edge);
 
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
             cerr << "Reindexed edge " << edge->from() << (edge->from_start() ? " start" : " end")
                  << " -> " << edge->to() << (edge->to_end() ? " end" : " start") << endl;
@@ -10311,7 +10311,7 @@ void VG::orient_nodes_forward(set<id_t>& nodes_flipped) {
     });
 
     for(Edge* edge : to_remove) {
-#ifdef debug
+#ifdef DEBUG
 #pragma omp critical (cerr)
         cerr << "Removed cycle edge " << edge->from() << "->" << edge->to() << endl;
 #endif

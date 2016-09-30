@@ -26,6 +26,7 @@
 #include "filter.hpp"
 #include "google/protobuf/stubs/common.h"
 #include "progress_bar.hpp"
+#include "config.h"
 #include "version.hpp"
 #include "genotyper.hpp"
 #include "bubbles.hpp"
@@ -3513,12 +3514,11 @@ int main_mod(int argc, char** argv) {
     }
 
     VG* graph;
-    string file_name = argv[optind];
-    if (file_name == "-") {
+    if (strlen(argv[optind]) == 1 && argv[optind][0] == '-') {
         graph = new VG(std::cin);
     } else {
         ifstream in;
-        in.open(file_name.c_str());
+        in.open(argv[optind]);
         graph = new VG(in);
     }
 
@@ -3535,8 +3535,7 @@ int main_mod(int argc, char** argv) {
         vcflib::VariantCallFile variant_file;
         variant_file.open(vcf_filename);
         if (!variant_file.is_open()) {
-            cerr << "error:[vg mod] could not open" << vcf_filename << endl;
-            return 1;
+            throw runtime_error("error:[vg mod] could not open" + vcf_filename);
         }
         
         // Now go through and prune down the varaints.
@@ -3629,17 +3628,19 @@ int main_mod(int argc, char** argv) {
             // this ... maybe we should remove it as for when we have calls against N
             bool isDNA = allATGC(var.ref);
             for (vector<string>::iterator a = var.alt.begin(); a != var.alt.end(); ++a) {
-                if (!allATGC(*a)) isDNA = false;
+                if (!allATGC(*a)) {
+                    isDNA = false;
+                    break ;// just need to determine this once 
+                }
             }
+            
             // only work with DNA sequences
-            if (!isDNA) {
-                continue;
+            if (isDNA) {
+                var.position--; // convert to 0-based
+
+                // Handle the variant
+                handle_variant(var);
             }
-
-            var.position -= 1; // convert to 0-based
-
-            // Handle the variant
-            handle_variant(var);
         }
         
         
@@ -3652,7 +3653,7 @@ int main_mod(int argc, char** argv) {
                 // destroy the path. We can't leave it because it won't be the
                 // same path without this node.
                 graph->paths.remove_path(path_name);
-#ifdef debug
+#ifdef DEBUG
                 cerr << "Node " << node_id << " was on path " << path_name << endl;
 #endif
             }
@@ -3867,8 +3868,8 @@ int main_mod(int argc, char** argv) {
             cerr << "[vg mod]: when adding start and end markers you must provide a --path-length" << endl;
             return 1;
         }
-        Node* head_node = NULL;
-        Node* tail_node = NULL;
+        Node* head_node = nullptr;
+        Node* tail_node = nullptr;
         graph->add_start_end_markers(path_length, '#', '$', head_node, tail_node);
     }
 
@@ -8052,7 +8053,7 @@ int main_view(int argc, char** argv) {
     //     json-pileup -> pileup
 
     string output_type;
-    string input_type;
+    Fileformat input_type = Fileformat::unknown;
     string rdf_base_uri;
     bool input_json = false;
     string alignments;
@@ -8151,7 +8152,7 @@ int main_view(int argc, char** argv) {
             break;
 
         case 'Z':
-            input_type = "translation";
+            input_type = Fileformat::translation;
             output_type = "json";
             break;
 
@@ -8181,7 +8182,7 @@ int main_view(int argc, char** argv) {
             break;
 
         case 'F':
-            input_type = "gfa";
+            input_type = Fileformat::gfa;
             break;
 
         case 'j':
@@ -8190,14 +8191,14 @@ int main_view(int argc, char** argv) {
 
         case 'J':
             // -J can complement input GAM/Pileup, hence the extra logic here.
-            if (input_type.empty()) {
-                input_type = "json";
+            if (input_type == Fileformat::unknown) {
+                input_type = Fileformat::json;
             }
             input_json = true;
             break;
 
         case 'c':
-            input_type = "vg";
+            input_type = Fileformat::vg;
             output_type = "stream";
             break;
 
@@ -8206,7 +8207,7 @@ int main_view(int argc, char** argv) {
             break;
 
         case 'V':
-            input_type = "vg";
+            input_type = Fileformat::vg;
             break;
 
         case 'G':
@@ -8221,10 +8222,10 @@ int main_view(int argc, char** argv) {
             rdf_base_uri = optarg;
             break;
         case 'T':
-            input_type= "turtle-in";
+            input_type= Fileformat::turtle_in;
             break;
         case 'a':
-            input_type = "gam";
+            input_type = Fileformat::gam;
             if(output_type.empty()) {
                 // Default to GAM -> JSON
                 output_type = "json";
@@ -8232,7 +8233,7 @@ int main_view(int argc, char** argv) {
             break;
 
         case 'b':
-            input_type = "bam";
+            input_type = Fileformat::bam;
             if(output_type.empty()) {
                 // Default to BAM -> GAM, since BAM isn't convertable to our normal default.
                 output_type = "gam";
@@ -8240,7 +8241,7 @@ int main_view(int argc, char** argv) {
             break;
 
         case 'f':
-            input_type = "fastq";
+            input_type = Fileformat::fastq;
             if(output_type.empty()) {
                 // Default to FASTQ -> GAM
                 output_type = "gam";
@@ -8264,7 +8265,7 @@ int main_view(int argc, char** argv) {
             break;
 
         case 'l':
-            input_type = "pileup";
+            input_type = Fileformat::pileup;
             if (output_type.empty()) {
                 // Default to Pileup -> JSON
                 output_type = "json";
@@ -8272,7 +8273,7 @@ int main_view(int argc, char** argv) {
             break;
 
         case 'q':
-            input_type = "locus";
+            input_type = Fileformat::locus;
             if (output_type.empty()) {
                 // Default to Locus -> JSON
                 output_type = "json";
@@ -8300,8 +8301,8 @@ int main_view(int argc, char** argv) {
     }
 
     // If the user specified nothing else, we default to VG in and GFA out.
-    if (input_type.empty()) {
-        input_type = "vg";
+    if (Fileformat::unknown) {
+        input_type = Fileformat::vg;//do this at the CONSTRUCTOR rather than afterwards
     }
     if (output_type.empty()) {
         output_type = "gfa";
@@ -8330,64 +8331,11 @@ int main_view(int argc, char** argv) {
         exit(1);
     }
     string file_name = argv[optind];
-    if (input_type == "vg") {
-        if (output_type == "stream") {
-            function<void(Graph&)> lambda = [&](Graph& g) { cout << pb2json(g) << endl; };
-            if (file_name == "-") {
-                stream::for_each(std::cin, lambda);
-            } else {
-                ifstream in;
-                in.open(file_name.c_str());
-                stream::for_each(in, lambda);
-            }
-            return 0;
-        } else {
-            if (file_name == "-") {
-                graph = new VG(std::cin);
-            } else {
-                ifstream in;
-                in.open(file_name.c_str());
-                graph = new VG(in);
-            }
-        }
-        // VG can convert to any of the graph formats, so keep going
-    } else if (input_type == "gfa") {
-        if (file_name == "-") {
-            graph = new VG;
-            graph->from_gfa(std::cin);
-        } else {
-            ifstream in;
-            in.open(file_name.c_str());
-            graph = new VG;
-            graph->from_gfa(in);
-        }
-        // GFA can convert to any of the graph formats, so keep going
-    } else if(input_type == "json") {
-        assert(input_json == true);
-        JSONStreamHelper<Graph> json_helper(file_name);
-        function<bool(Graph&)> get_next_graph = json_helper.get_read_fn();
-        graph = new VG(get_next_graph, false);
-    } else if(input_type == "turtle-in") {
-        graph = new VG;
-        bool pre_compress=color_variants;
-        if (file_name == "-") {
-            graph->from_turtle("/dev/stdin", rdf_base_uri);
-        } else {
-            graph->from_turtle(file_name, rdf_base_uri);
-        }
-    } else if (input_type == "gam") {
-        if (input_json == false) {
-            if (output_type == "json") {
-                // convert values to printable ones
-                function<void(Alignment&)> lambda = [](Alignment& a) {
-                    if(std::isnan(a.identity())) {
-                        // Fix up NAN identities that can't be serialized in
-                        // JSON. We shouldn't generate these any more, and they
-                        // are out of spec, but they can be in files.
-                        a.set_identity(0);
-                    }
-                    cout << pb2json(a) << "\n";
-                };
+    //@todo input_type must be enum and a switch should take care of this loop
+    
+        if (input_type == Fileformat::vg) {
+            if (output_type == "stream") {
+                function<void(Graph&)> lambda = [&](Graph& g) { cout << pb2json(g) << endl; };
                 if (file_name == "-") {
                     stream::for_each(std::cin, lambda);
                 } else {
@@ -8395,55 +8343,82 @@ int main_view(int argc, char** argv) {
                     in.open(file_name.c_str());
                     stream::for_each(in, lambda);
                 }
+                return 0;
             } else {
-                // todo
-                cerr << "[vg view] error: (binary) GAM can only be converted to JSON" << endl;
-                return 1;
-            }
-        } else {
-            if (output_type == "json" || output_type == "gam") {
-                JSONStreamHelper<Alignment> json_helper(file_name);
-                json_helper.write(cout, output_type == "json");
-            } else {
-                cerr << "[vg view] error: JSON GAM can only be converted to GAM or JSON" << endl;
-                return 1;
-            }
-        }
-        cout.flush();
-        return 0;
-    } else if (input_type == "bam") {
-        if (output_type == "gam") {
-            //function<void(const Alignment&)>& lambda) {
-            // todo write buffering procedure in alignment.cpp
-            vector<Alignment> buf;
-            function<void(Alignment&)> lambda = [&buf](Alignment& aln) {
-                buf.push_back(aln);
-                if (buf.size() > 1000) {
-                    write_alignments(std::cout, buf);
-                    buf.clear();
+                if (file_name == "-") {
+                    graph = new VG(std::cin);
+                } else {
+                    ifstream in;
+                    in.open(file_name.c_str());
+                    graph = new VG(in);
                 }
-            };
-            hts_for_each(file_name, lambda);
-            write_alignments(std::cout, buf);
-            buf.clear();
+            }
+            // VG can convert to any of the graph formats, so keep going
+        } else if (input_type == Fileformat::gfa) {
+            if (file_name == "-") {
+                graph = new VG;
+                graph->from_gfa(std::cin);
+            } else {
+                ifstream in;
+                in.open(file_name.c_str());
+                graph = new VG;
+                graph->from_gfa(in);
+            }
+            // GFA can convert to any of the graph formats, so keep going
+        } else if (input_type == Fileformat::json) {
+            assert(input_json == true);
+            JSONStreamHelper<Graph> json_helper(file_name);
+            function<bool(Graph&)> get_next_graph = json_helper.get_read_fn();
+            graph = new VG(get_next_graph, false);
+        } else if (input_type == Fileformat::turtle_in) {
+            graph = new VG;
+            bool pre_compress=color_variants;
+            if (file_name == "-") {
+                graph->from_turtle("/dev/stdin", rdf_base_uri);
+            } else {
+                graph->from_turtle(file_name, rdf_base_uri);
+            }
+        } else if (input_type == Fileformat::gam) {
+            if (input_json == false) {
+                if (output_type == "json") {
+                    // convert values to printable ones
+                    function<void(Alignment&)> lambda = [](Alignment& a) {
+                        if(std::isnan(a.identity())) {
+                            // Fix up NAN identities that can't be serialized in
+                            // JSON. We shouldn't generate these any more, and they
+                            // are out of spec, but they can be in files.
+                            a.set_identity(0);
+                        }
+                        cout << pb2json(a) << "\n";
+                    };
+                    if (file_name == "-") {
+                        stream::for_each(std::cin, lambda);
+                    } else {
+                        ifstream in;
+                        in.open(file_name.c_str());
+                        stream::for_each(in, lambda);
+                    }
+                } else {
+                    // todo
+                    cerr << "[vg view] error: (binary) GAM can only be converted to JSON" << endl;
+                    return 1;
+                }
+            } else {
+                if (output_type == "json" || output_type == "gam") {
+                    JSONStreamHelper<Alignment> json_helper(file_name);
+                    json_helper.write(cout, output_type == "json");
+                } else {
+                    cerr << "[vg view] error: JSON GAM can only be converted to GAM or JSON" << endl;
+                    return 1;
+                }
+            }
             cout.flush();
             return 0;
-        } else if (output_type == "json") {
-            // todo
-            cerr << "[vg view] error: BAM to JSON conversion not yet implemented" << endl;
-            return 0;
-        } else {
-            cerr << "[vg view] error: BAM can only be converted to GAM" << endl;
-            return 1;
-        }
-    } else if (input_type == "fastq") {
-        fastq1 = argv[optind++];
-        if (optind < argc) {
-            fastq2 = argv[optind];
-        }
-        if (output_type == "gam") {
-            vector<Alignment> buf;
-            if (!interleaved_fastq && fastq2.empty()) {
+        } else if (input_type == Fileformat::bam) {
+            if (output_type == "gam") {
+                //function<void(const Alignment&)>& lambda) {
+                // todo write buffering procedure in alignment.cpp
+                vector<Alignment> buf;
                 function<void(Alignment&)> lambda = [&buf](Alignment& aln) {
                     buf.push_back(aln);
                     if (buf.size() > 1000) {
@@ -8451,43 +8426,99 @@ int main_view(int argc, char** argv) {
                         buf.clear();
                     }
                 };
-                fastq_unpaired_for_each(fastq1, lambda);
-            } else if (interleaved_fastq && fastq2.empty()) {
-                function<void(Alignment&, Alignment&)> lambda = [&buf](Alignment& aln1, Alignment& aln2) {
-                    buf.push_back(aln1);
-                    buf.push_back(aln2);
-                    if (buf.size() > 1000) {
-                        write_alignments(std::cout, buf);
-                        buf.clear();
-                    }
-                };
-                fastq_paired_interleaved_for_each(fastq1, lambda);
-            } else if (!fastq2.empty()) {
-                function<void(Alignment&, Alignment&)> lambda = [&buf](Alignment& aln1, Alignment& aln2) {
-                    buf.push_back(aln1);
-                    buf.push_back(aln2);
-                    if (buf.size() > 1000) {
-                        write_alignments(std::cout, buf);
-                        buf.clear();
-                    }
-                };
-                fastq_paired_two_files_for_each(fastq1, fastq2, lambda);
+                hts_for_each(file_name, lambda);
+                write_alignments(std::cout, buf);
+                buf.clear();
+                cout.flush();
+                return 0;
+            } else if (output_type == "json") {
+                // todo
+                cerr << "[vg view] error: BAM to JSON conversion not yet implemented" << endl;
+                return 0;
+            } else {
+                cerr << "[vg view] error: BAM can only be converted to GAM" << endl;
+                return 1;
             }
-            write_alignments(std::cout, buf);
-            buf.clear();
-        } else {
-            // We can't convert fastq to the other graph formats
-            cerr << "[vg view] error: FASTQ can only be converted to GAM" << endl;
-            return 1;
-        }
-        cout.flush();
-        return 0;
-    } else if (input_type == "pileup") {
-        if (input_json == false) {
+        } else if (input_type == Fileformat::fastq) {
+            fastq1 = argv[optind++];
+            if (optind < argc) {
+                fastq2 = argv[optind];
+            }
+            if (output_type == "gam") {
+                vector<Alignment> buf;
+                if (!interleaved_fastq && fastq2.empty()) {
+                    function<void(Alignment&)> lambda = [&buf](Alignment& aln) {
+                        buf.push_back(aln);
+                        if (buf.size() > 1000) {
+                            write_alignments(std::cout, buf);
+                            buf.clear();
+                        }
+                    };
+                    fastq_unpaired_for_each(fastq1, lambda);
+                } else if (interleaved_fastq && fastq2.empty()) {
+                    function<void(Alignment&, Alignment&)> lambda = [&buf](Alignment& aln1, Alignment& aln2) {
+                        buf.push_back(aln1);
+                        buf.push_back(aln2);
+                        if (buf.size() > 1000) {
+                            write_alignments(std::cout, buf);
+                            buf.clear();
+                        }
+                    };
+                    fastq_paired_interleaved_for_each(fastq1, lambda);
+                } else if (!fastq2.empty()) {
+                    function<void(Alignment&, Alignment&)> lambda = [&buf](Alignment& aln1, Alignment& aln2) {
+                        buf.push_back(aln1);
+                        buf.push_back(aln2);
+                        if (buf.size() > 1000) {
+                            write_alignments(std::cout, buf);
+                            buf.clear();
+                        }
+                    };
+                    fastq_paired_two_files_for_each(fastq1, fastq2, lambda);
+                }
+                write_alignments(std::cout, buf);
+                buf.clear();
+            } else {
+                // We can't convert fastq to the other graph formats
+                cerr << "[vg view] error: FASTQ can only be converted to GAM" << endl;
+                return 1;
+            }
+            cout.flush();
+            return 0;
+        } else if (input_type == Fileformat::pileup) {
+            if (input_json == false) {
+                if (output_type == "json") {
+                    // convert values to printable ones
+                    function<void(Pileup&)> lambda = [](Pileup& p) {
+                        cout << pb2json(p) << "\n";
+                    };
+                    if (file_name == "-") {
+                        stream::for_each(std::cin, lambda);
+                    } else {
+                        ifstream in;
+                        in.open(file_name.c_str());
+                        stream::for_each(in, lambda);
+                    }
+                } else {
+                    // todo
+                    cerr << "[vg view] error: (binary) Pileup can only be converted to JSON" << endl;
+                    return 1;
+                }
+            } else {
+                if (output_type == "json" || output_type == "pileup") {
+                    JSONStreamHelper<Pileup> json_helper(file_name);
+                    json_helper.write(cout, output_type == "json");
+                } else {
+                    cerr << "[vg view] error: JSON Pileup can only be converted to Pileup or JSON" << endl;
+                    return 1;
+                }
+            }
+            cout.flush();
+            return 0;
+        } else if (input_type == Fileformat::translation) {
             if (output_type == "json") {
-                // convert values to printable ones
-                function<void(Pileup&)> lambda = [](Pileup& p) {
-                    cout << pb2json(p) << "\n";
+                function<void(Translation&)> lambda = [](Translation& t) {
+                    cout << pb2json(t) << "\n";
                 };
                 if (file_name == "-") {
                     stream::for_each(std::cin, lambda);
@@ -8497,74 +8528,44 @@ int main_view(int argc, char** argv) {
                     stream::for_each(in, lambda);
                 }
             } else {
-                // todo
-                cerr << "[vg view] error: (binary) Pileup can only be converted to JSON" << endl;
+                cerr << "[vg view] error: (binary) Translation can only be converted to JSON" << endl;
                 return 1;
             }
-        } else {
-            if (output_type == "json" || output_type == "pileup") {
-                JSONStreamHelper<Pileup> json_helper(file_name);
-                json_helper.write(cout, output_type == "json");
-            } else {
-                cerr << "[vg view] error: JSON Pileup can only be converted to Pileup or JSON" << endl;
-                return 1;
-            }
-        }
-        cout.flush();
-        return 0;
-    } else if (input_type == "translation") {
-        if (output_type == "json") {
-            function<void(Translation&)> lambda = [](Translation& t) {
-                cout << pb2json(t) << "\n";
-            };
-            if (file_name == "-") {
-                stream::for_each(std::cin, lambda);
-            } else {
-                ifstream in;
-                in.open(file_name.c_str());
-                stream::for_each(in, lambda);
-            }
-        } else {
-            cerr << "[vg view] error: (binary) Translation can only be converted to JSON" << endl;
-            return 1;
-        }
-        return 0;
-    } else if (input_type == "locus") {
-        if (input_json == false) {
-            if (output_type == "json") {
-                // convert values to printable ones
-                function<void(Locus&)> lambda = [](Locus& l) {
-                    cout << pb2json(l) << "\n";
-                };
-                if (file_name == "-") {
-                    stream::for_each(std::cin, lambda);
+            return 0;
+        } else if (input_type == Fileformat::locus) {
+            if (input_json == false) {
+                if (output_type == "json") {
+                    // convert values to printable ones
+                    function<void(Locus&)> lambda = [](Locus& l) {
+                        cout << pb2json(l) << "\n";
+                    };
+                    if (file_name == "-") {
+                        stream::for_each(std::cin, lambda);
+                    } else {
+                        ifstream in;
+                        in.open(file_name.c_str());
+                        stream::for_each(in, lambda);
+                    }
                 } else {
-                    ifstream in;
-                    in.open(file_name.c_str());
-                    stream::for_each(in, lambda);
+                    // todo
+                    cerr << "[vg view] error: (binary) Locus can only be converted to JSON" << endl;
+                    return 1;
                 }
             } else {
-                // todo
-                cerr << "[vg view] error: (binary) Locus can only be converted to JSON" << endl;
-                return 1;
+                if (output_type == "json" || output_type == "locus") {
+                    JSONStreamHelper<Locus> json_helper(file_name);
+                    json_helper.write(cout, output_type == "json");
+                } else {
+                    cerr << "[vg view] error: JSON Locus can only be converted to Locus or JSON" << endl;
+                    return 1;
+                }
             }
+            cout.flush();
+            return 0;
         } else {
-            if (output_type == "json" || output_type == "locus") {
-                JSONStreamHelper<Locus> json_helper(file_name);
-                json_helper.write(cout, output_type == "json");
-            } else {
-                cerr << "[vg view] error: JSON Locus can only be converted to Locus or JSON" << endl;
-                return 1;
-            }
-        }
-        cout.flush();
-        return 0;
-    }
-
-    if(graph == nullptr) {
-        // Make sure we didn't forget to implement an input format.
-        cerr << "[vg view] error: cannot load graph in " << input_type << " format" << endl;
-        return 1;
+            // Make sure we didn't forget to implement an input format.
+            cerr << "[vg view] error: cannot load graph in unknown format" << endl;
+            return 1;
     }
 
     if(!graph->is_valid()) {
@@ -8994,7 +8995,13 @@ int main_version(int argc, char** argv){
         return 1;
     }
 
-    cout << VG_VERSION_STRING << endl;
+    cout << VG_VERSION_STRING;
+
+    #ifdef DEBUG
+        cout << "-dbg";
+    #endif
+
+    cout << endl;
     return 0;
 }
 
@@ -9007,7 +9014,7 @@ int main_test(int argc, char** argv){
 }
 
 void vg_help(char** argv) {
-    cerr << "vg: variation graph tool, version " << VG_VERSION_STRING << endl
+    cout << "vg: variation graph tool, version " << VG_VERSION_STRING << endl
          << endl
          << "usage: " << argv[0] << " <command> [options]" << endl
          << endl
@@ -9047,7 +9054,7 @@ int main(int argc, char *argv[])
 
     if (argc == 1) {
         vg_help(argv);
-        return 1;
+        return 0;
     }
 
     //omp_set_dynamic(1); // use dynamic scheduling
@@ -9107,11 +9114,14 @@ int main(int argc, char *argv[])
         return main_circularize(argc, argv);
     }  else if (command == "translate") {
         return main_translate(argc, argv);
-    }  else if (command == "version") {
+    }  else if (command == "version" || command == "--version") {
         return main_version(argc, argv);
     } else if (command == "test") {
         return main_test(argc, argv);
-    }else {
+    } else if (command == "-h" or command == "--help") {
+        vg_help(argv);
+        return 0;
+    } else {
         cerr << "error:[vg] command " << command << " not found" << endl;
         vg_help(argv);
         return 1;
