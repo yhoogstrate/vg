@@ -39,6 +39,7 @@ public:
      * graph.
      */
     void add_variants(vcflib::VariantCallFile* vcf);
+    void add_splice_junction(string &variant_path_name, int sj_start, int sj_end);
     
     /**
      * Align the given string to the given graph, wetween the given endpoints,

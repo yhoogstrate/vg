@@ -44,6 +44,7 @@ void VariantAdder::add_variants(vcflib::VariantCallFile* vcf) {
         
         // Where is it?
         auto variant_path_name = vcf_to_fasta(variant->sequenceName);
+        
         auto& variant_path_offset = variant->position; // Already made 0-based by the buffer
         
         if (!path_names.count(variant_path_name)) {
@@ -246,6 +247,7 @@ void VariantAdder::add_variants(vcflib::VariantCallFile* vcf) {
 
                 // Make a request to lock the subgraph, leaving the nodes we rounded
                 // to (or the child nodes they got broken into) as heads/tails.
+                //printf("[%i,%i]\n", left_context_start, right_context_past_end);//
                 GraphSynchronizer::Lock lock(sync, variant_path_name, left_context_start, right_context_past_end);
                 
 #ifdef debug
@@ -381,6 +383,81 @@ void VariantAdder::add_variants(vcflib::VariantCallFile* vcf) {
     // Clean up after the last contig.
     destroy_progress();
     
+}
+
+void VariantAdder::add_splice_junction(string &variant_path_name, int sj_start, int sj_end) {
+    set<string> skipped_contigs;
+    if (!path_names.count(variant_path_name)) {
+        // This variant isn't on a path we have.
+        if (ignore_missing_contigs) {
+            // That's OK. Just skip it.
+            
+            if (!skipped_contigs.count(variant_path_name)) {
+                // Warn first
+                
+                // Don't clobber an existing progress bar (which must be over since we must be on a new contig)
+                destroy_progress();
+                cerr << "warning:[vg::VariantAdder] skipping missing contig " << variant_path_name << endl;
+                skipped_contigs.insert(variant_path_name);
+            }
+        } else {
+            // Explode!
+            throw runtime_error("Contig " + variant_path_name + " mentioned in VCF but not found in graph");
+        }
+    }
+    
+    const string& ref_sequence = sync.get_path_sequence(variant_path_name);
+    const string& path_sequence = sync.get_path_sequence(variant_path_name);
+    size_t group_start = (size_t) sj_start;
+    // And where does it end (exclusive)? This is the latest ending point of any variant in the group...
+    size_t group_end = (size_t) sj_end;
+    
+    // We need to make sure we also grab this much extra graph context,
+    // since we count 2 radiuses + flank out from the ends of the group.
+    size_t group_width = group_end - group_start;
+    
+    // Find the center and radius of the group of variants, so we know what graph part to grab.
+    size_t overall_center;
+    size_t overall_radius;
+    //tie(overall_center, overall_radius) = get_center_and_radius(local_variants);
+
+    // Get the leading and trailing ref sequence on either side of this
+    // group of variants (to pin the outside variants down).
+
+    // On the left we want either flank_range bases, or all the bases before
+    // the first base in the group.
+    size_t left_context_length = min((int64_t) flank_range, (int64_t) group_start);
+    // On the right we want either flank_range bases, or all the bases after
+    // the last base in the group. We know nothing will overlap the end of
+    // the last variant, because we grabbed nonoverlapping variants.
+    size_t right_context_length = min(path_sequence.size() - group_end, (size_t) flank_range);
+
+    // Turn those into desired substring bounds.
+    // TODO: this is sort of just undoing some math we already did
+    size_t left_context_start = group_start - left_context_length;
+    size_t right_context_past_end = group_end + right_context_length;
+    
+    string left_context = path_sequence.substr(group_start - left_context_length, left_context_length);
+    string right_context = path_sequence.substr(group_end, right_context_length);
+
+
+
+    // first do it hardcoded
+    GraphSynchronizer::Lock lock(sync, variant_path_name, 0, 208);
+    //vcflib::Variant* v = new vcflib::Variant;
+    //v->ref = variant_path_name;
+    /*
+    string sequenceName;
+    long position;
+    long zeroBasedPosition(void);
+    string id;
+    string ref;
+    vector<string> alt;      // a list of all the alternate alleles present at this locus
+    vector<string> alleles;  // a list all alleles (ref + alt) at this locus
+
+     */
+
+
 }
 
 Alignment VariantAdder::smart_align(vg::VG& graph, pair<NodeSide, NodeSide> endpoints, const string& to_align, size_t max_span) {

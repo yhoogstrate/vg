@@ -16,7 +16,9 @@
 #include "../vg.hpp"
 #include "../variant_adder.hpp"
 
-
+#include <seqan/basic.h>
+#include <seqan/gff_io.h>
+using namespace seqan;
 
 using namespace std;
 using namespace vg;
@@ -26,6 +28,7 @@ void help_add(char** argv) {
     cerr << "usage: " << argv[0] << " add [options] old.vg >new.vg" << endl
          << "options:" << endl
          << "    -v, --vcf FILE         add in variants from the given VCF file (may repeat)" << endl
+         << "    -g, --gtf FILE         add trascriptome / splice junction annotation from the given GTF file" << endl
          << "    -n, --rename V=G       rename contig V in the VCFs to contig G in the graph (may repeat)" << endl
          << "    -i, --ignore-missing   ignore contigs in the VCF not found in the graph" << endl
          << "    -r, --variant-range N  range in which to look for nearby variants to make a haplotype" << endl
@@ -44,6 +47,7 @@ int main_add(int argc, char** argv) {
     
     // We can have one or more VCFs
     vector<string> vcf_filenames;
+    vector<string> gtf_filenames;
     // And one or more renames
     vector<pair<string, string>> renames;
     bool show_progress = false;
@@ -60,6 +64,7 @@ int main_add(int argc, char** argv) {
         static struct option long_options[] =
             {
                 {"vcf", required_argument, 0, 'v'},
+                {"gtf", required_argument, 0, 'g'},
                 {"rename", required_argument, 0, 'n'},
                 {"ignore-missing", no_argument, 0, 'i'},
                 {"variant-range", required_argument, 0, 'r'},
@@ -71,7 +76,7 @@ int main_add(int argc, char** argv) {
             };
 
         int option_index = 0;
-        c = getopt_long (argc, argv, "v:n:r:f:ipt:h?",
+        c = getopt_long (argc, argv, "v:g:n:r:f:ipt:h?",
                          long_options, &option_index);
 
         /* Detect the end of the options. */
@@ -83,6 +88,9 @@ int main_add(int argc, char** argv) {
 
         case 'v':
             vcf_filenames.push_back(optarg);
+            break;
+        case 'g':
+            gtf_filenames.push_back(optarg);
             break;
             
         case 'n':
@@ -201,7 +209,38 @@ int main_add(int argc, char** argv) {
             
             // Add the variants from the VCF to the graph, at the same
             // time as other VCFs.
-            adder.add_variants(&vcf);        
+            adder.add_variants(&vcf);
+        }
+        
+        
+        #pragma omp parallel for
+        for (size_t i = 0; i < gtf_filenames.size(); i++) {
+            auto& gtf = gtf_filenames[i];
+            string last_gid = "";
+            string gid_gtf;
+            std::vector<int> exons_stop;
+            
+            GffFileIn gffIn(gtf.c_str());
+            GffRecord record;
+            while(!atEnd(gffIn))
+            {
+                readRecord(record, gffIn);
+                if(strcmp(toCString(record.type), "exon") == 0) {
+                    gid_gtf = toCString(record.tagValues[0]);//@todo picks first gff entry, not by definition gene_id
+                    
+                    if(gid_gtf != last_gid) {
+                        last_gid = gid_gtf;
+                        exons_stop.clear();
+                    }
+
+                    // form sj's with all previous exons of this and insert itself afterwards
+                    for (size_t j = 0; j < exons_stop.size(); j++) {
+                        printf("%s:%i-%i\n",toCString(record.ref),exons_stop[j], record.beginPos + 1);
+                    }
+                    exons_stop.push_back(record.endPos);
+
+                }
+            }   
         }
         
         // TODO: should we sort the graph?

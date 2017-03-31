@@ -1,0 +1,2 @@
+gene1	.	exon	38	70	.	+	.	gene_id="ENSG00000169861";transcript_id="ENST00000302092";gene_type="protein_coding";gene_status="KNOWN";gene_name="IGHV1OR15-5";transcript_type="protein_coding";transcript_name="IGHV1OR15-5-001";
+gene1	.	exon	130	174	.	+	.	gene_id="ENSG00000169861";transcript_id="ENST00000302092";gene_type="protein_coding";gene_status="KNOWN";gene_name="IGHV1OR15-5";transcript_type="protein_coding";transcript_name="IGHV1OR15-5-001";
